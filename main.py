@@ -18,9 +18,9 @@ with open("users.txt", "r") as f:
 
 def update_users(user_id):
     users.add(user_id)
-    with open("users.txt", "w") as f:
+    with open("users.txt", "a") as f:
         f.write(str(user_id))
-        f.write(os.linesep) 
+        f.write(os.linesep)
 
 
 def process_updates():
@@ -39,7 +39,6 @@ def process_updates():
             username = update["message"]["from"]["first_name"]
         if not username:
             username = "anon"
-            
                 
         if user_id not in users:
             time_to_send_frog(user_id)
@@ -49,7 +48,6 @@ def process_updates():
                 "chat_id": user_id,
                 "text": f"Hello, {username}. I'm here to hail all Wednesdudes!"
             })
-            
 
         # else:
         #     requests.post(url+"sendMessage", data={
