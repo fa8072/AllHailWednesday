@@ -2,27 +2,37 @@ import requests
 import json
 import time
 import random 
+import pathlib
+import os
+import datetime
+
 
 config = json.load(open("isthatright.json"))
 token = config["config"]["token"]
 
 url = f"https://api.telegram.org/bot{token}/" 
-frogs_list = "https://drive.google.com/drive/folders/1vKe7Up1EMEaPS1EPlfTYRE91ApvUGbyH"
+frogs_list = list((pathlib.Path(__file__).parent/"frogs").iterdir())
+
+with open("users.txt", "r") as f:
+    users = set(int(line) for line in f.readlines() if line.strip())
+
+def update_users(user_id):
+    users.add(user_id)
+    with open("users.txt", "w") as f:
+        f.write(str(user_id))
+        f.write(os.linesep) 
 
 
-while True:
-    with open("lastMessage") as f:
-        last = int(f.read())
-    updates = requests.get(url+f"getUpdates?offset={last+1}")
-
+def process_updates():
+    updates = requests.get(url+f"getUpdates")
     print(updates.json())
 
     for update in updates.json()["result"]:
         if "message" not in update:
             continue
 
-        txt = update["message"]["text"]
         username = ""
+        user_id = int(update["message"]["chat"]["id"])
         if "username" in update["message"]["from"]:
             username = update["message"]["from"]["username"]
         elif "first_name" in update["message"]["from"]:
@@ -30,28 +40,49 @@ while True:
         if not username:
             username = "anon"
             
-        # if txt.strip().lower() == "k-index":
-        #     k_indexes = requests.get(k_index)
-        #     last_k_index = k_indexes.json()[-1]
-        #     requests.post(url+"sendMessage", data={
-        #         "chat_id": update["message"]["chat"]["id"],
-        #         "text": f"Currently K-Index is {last_k_index[1]}"
-        #     })
                 
-        elif txt.strip().lower() == "hello":
+        if user_id not in users:
+            time_to_send_frog(user_id)
+            update_users(user_id)
+
             requests.post(url+"sendMessage", data={
-                "chat_id": update["message"]["chat"]["id"],
+                "chat_id": user_id,
                 "text": f"Hello, {username}. I'm here to hail all Wednesdudes!"
             })
+            
 
-        else:
-            requests.post(url+"sendMessage", data={
-                "chat_id": update["message"]["chat"]["id"],
-                "text": f"Sorry, don't get it."
-            })
+        # else:
+        #     requests.post(url+"sendMessage", data={
+        #         "chat_id": user_id,
+        #         "text": f"Sorry, don't get it."
+        #     })
 
-        with open("lastMessage", "w") as f:
-            f.write(str(update["update_id"]))
+last_day = 0
 
+def time_to_send_frog(user_id):
+
+    today_frog = random.choice(frogs_list)
+    print("sending file")
+    status = requests.post(url+"sendPhoto", files={
+        "photo": today_frog.open("br").read()
+    }, data={
+        "chat_id": user_id
+    })
+    print(status.status_code, user_id)
+
+
+def try_to_send_frog():
+    date = datetime.datetime.now()
+    
+    if date.weekday == 2 and date.hour == 3 and date.minute == 13 and last_day != date.day:
+        last_day = date.day
+
+        for user_id in users:
+            time_to_send_frog(user_id)
+
+
+while True:
+    process_updates()
+    try_to_send_frog()
 
     time.sleep(1)
