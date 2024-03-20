@@ -41,7 +41,10 @@ def process_updates():
             username = "anon"
                 
         if user_id not in users:
-            time_to_send_frog(user_id)
+
+            date = datetime.datetime.now()
+            if date.weekday() == 2:
+                time_to_send_frog(user_id)
             update_users(user_id)
 
             requests.post(url+"sendMessage", data={
@@ -71,8 +74,8 @@ def time_to_send_frog(user_id):
 
 def try_to_send_frog():
     date = datetime.datetime.now()
-    
-    if date.weekday == 2 and date.hour == 3 and date.minute == 13 and last_day != date.day:
+    global last_day
+    if date.weekday() == 2 and date.hour == 3 and date.minute == 13 and last_day != date.day:
         last_day = date.day
 
         for user_id in users:
